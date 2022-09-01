@@ -5,5 +5,5 @@ R and JAGS code to fit hierarchical distance sampling and spatial capture recapt
 
 Repository includes
 1) R and JAGS code to fit Bayesian hierarchical distance sampling models to point count data (simulated and empirical)
-2) R and JAGS code to fit Bayesian hierarchical distance sampling models to ARU data (simulated and empirical)
+2) JAGS code to fit Bayesian hierarchical distance sampling models to ARU data (simulated and empirical)
 3) R code to fit spatial capture recapture models to trapping and telemetry data (simulated and empirical)
