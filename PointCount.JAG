@@ -1,0 +1,54 @@
+model{
+
+## Priors and constraints
+# Expected density ED
+
+# Perceptibility constant across sites and years
+#beta0 ~ dnorm(0,0.01)  # Intercept of perceptibility for distance sampling model
+
+for(t in 1:nyears){
+logED[t] ~ dnorm(0, 0.01) # On the log scale
+ED[t] <- exp(logED[t])       # Compare to simulated E(D)
+beta0[t] ~ dnorm(0,0.01)  # Intercept of perceptibility for distance sampling model
+sigma[t] <- exp(beta0[t])
+
+#sigma[t] <- exp(beta0)
+  for(i in 1:nsites){  
+
+  for(b in 1:nB){
+  # analytical integration of detection function; for a half normal detection function
+  
+ p[i,b,t] <- (sigma[t]^2*(1-exp(-db[b+1]^2/(2*sigma[t]^2)))-sigma[t]^2*(1-exp(-db[b]^2/(2*sigma[t]^2))))*2*3.1416/(point.area*pix[b]) # divide by area of each donut
+  pi[i,b,t] <- p[i,b,t]*pix[b] 
+    }
+    
+  # Overall percepbility at each point (constant)
+  pCirc[i,t] <- sum(pi[i,1:nB,t]) 
+  
+  # unConditional probability of detection
+  pMarg[i,t] <- pCirc[i,t]
+  
+  # Realized number of coveys at a point
+  N[i,t] ~ dpois(ED[t])
+           
+  # Realized number of birds at a point
+  N.c[i,t] <- N[i,t]*10  
+
+  # Distance data - what bin were the detected individuals in?
+  ydet[i,1:nB,t] ~ dmulti(pi[i,1:nB,t], y[i,t])
+            
+  # Number of observed individuals
+  y[i,t] ~ dbin(pMarg[i,t], N[i,t])
+  }#i
+  }
+
+  #4. Derived parameters
+  for(t in 1:nyears){
+    D[t] <- ED[t]*10*nsites / ((point.area*nsites)/10000) # Expected quail density
+
+  # Total individuals each year, each sampling area
+    mean_pCirc[t] <- mean(pCirc[,t])   # overall perceptibility
+
+  D.r[t] <- sum(N.c[,t]) / ((point.area*nsites)/10000) # Realized quail density
+  }#t
+}
