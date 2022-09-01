@@ -1,0 +1,78 @@
+ model{
+
+#-------------------------------------------------------------------------------
+# Distance - Peak Power linear relationship
+#-------------------------------------------------------------------------------
+
+ ### Priors ###
+   a0 ~ dnorm(76.45, 0.076)	  #intercept 
+   a1 ~ dnorm(-0.147, 1000)T(,0)  #growth rate
+   tau <- pow(sigma1, -2) 	  #inverse of variance
+   sigma1 ~ dexp(1/5)         
+
+
+ ### Likelihood ###
+   
+   # Model to estimate a0, a1 and SD for relationship between peak power and distance
+   # Using previously collected field data (Wilhite et al., 2020) (Ntest = 50) of peak power (pp_test) and distances (dist_test).
+   # Switched distance and pp so can predict power as function of distance - can use power data later
+      
+   	for (i in 1:Ntest){
+ 	 	pp_test[i] ~ dnorm(Epower_test[i], tau)   	
+		Epower_test[i] <- a0 + a1*dist_test[i]
+		detprob_test[i] <- exp(-dist_test[i]^2/(2*sigma2^2))
+                detected[i] ~ dbern(detprob_test[i])}
+
+
+
+#-------------------------------------------------------------------------------
+# ARU Call Detection and Abundance Model
+#-------------------------------------------------------------------------------
+
+  ### Priors ###
+
+    sigma2 ~ dnorm(200,0.01)
+    CallRate ~ dnorm(42.97, 0.5)    
+    fp ~ dnorm(0.165, 1000)T(0,)
+
+ 
+  ### Likelihood ###
+    
+	for(t in 1:nYear){
+
+	     psi[t] ~ dunif(0,1) 	
+		
+		for(i in 1:nSites[t]){
+	    
+         	   for (j in 1:(M)){ 
+ 		 	 
+		 	dist[j,i,t] ~ dunif(0, dmax)                              
+			negLogLike[j,i,t] = -log(2*dist[j,i,t] / dmax^2)
+			zeros[j,i,t] ~ dpois(negLogLike[j,i,t])
+
+			Epower[j,i,t] <- a0 + a1*dist[j,i,t]		
+		  	pp_real[j,i,t] ~ dnorm(Epower[j,i,t], tau)                
+                  	p_ind[j,i,t] <- exp(-(dist[j,i,t]*dist[j,i,t])/(2*sigma2^2))  
+			
+			z[j,i,t] ~ dbern(psi[t])                                   
+			mu[j,i,t] <- z[j,i,t]*p_ind[j,i,t]
+			y[j,i,t] ~ dbern(mu[j,i,t])                              
+
+	          }#j
+
+		}#i
+		
+	       NFP[t] <- sum(z[,,t])
+	       N[t] ~ dbin(1-fp, NFP[t])
+	       D.r[t] <- ((N[t]/CallRate)*10) / area[t]	    
+	       Pdet[t] <- mean(p_ind[, 1:nSites[t], t])                                  # Mean probability of detection	    
+			
+	       E.D.r[t] <- (((NE.D.r[t]/Pdet[t])/CallRate)*10) / area[t]	
+	       NE.D.r[t] ~ dbin(1-fp, n)
+
+           }#t
+
+
+       
+
+}
